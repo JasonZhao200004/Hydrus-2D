@@ -1,0 +1,85 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.tri import Triangulation
+
+grid_data = np.loadtxt("/Users/zhaozhe/Desktop/Project/Hydrus-2D/Meshtria_copy.txt")
+x = grid_data[:, 1] 
+z = np.abs(grid_data[:, 2])  
+
+theta = np.loadtxt("/Users/zhaozhe/Desktop/Project/Hydrus-2D/th_576h.txt")
+theta = theta.flatten()  
+
+v1 = np.loadtxt("/Users/zhaozhe/Desktop/Project/Hydrus-2D/v1_576h.txt")
+v2 = np.loadtxt("/Users/zhaozhe/Desktop/Project/Hydrus-2D/v2_576h.txt")
+v1 = v1.flatten()  
+v2 = v2.flatten()  
+v = np.sqrt(v1**2 + v2**2) 
+
+# Decay
+sf = np.zeros_like(theta) 
+for i in range(len(theta)):
+    if theta[i] <= 0.06:
+        sf[i] = 0.1
+    elif 0.06 < theta[i] < 0.15:
+        sf[i] = 10 * theta[i] - 0.5
+    elif 0.15 <= theta[i] <= 0.25:
+        sf[i] = 1
+    elif 0.25 < theta[i] < 0.37:
+        sf[i] = -5.83333333333 * theta[i] + 2.4583333333
+    elif theta[i] >= 0.37:
+        sf[i] = 0.3
+
+k = sf * 0.06  
+
+coords = np.column_stack((x, z))
+n_points = len(x)
+Da = np.zeros(n_points) 
+
+# Damköhler 
+for i in range(n_points):
+    for j in range(n_points):
+        if i != j:  
+            L_ij = np.linalg.norm(coords[i] - coords[j]) 
+            Da[i] += (k[i] * L_ij) / v[i]  
+
+
+Da_log = np.log10(Da)
+
+
+triang = Triangulation(x, z)
+
+# Damköhler 
+plt.figure(figsize=(8, 6))
+plt.tricontourf(triang, Da_log, cmap="viridis")  
+plt.colorbar(label="Log10(Damköhler Number)") 
+plt.triplot(triang, color='black', alpha=0.5, linewidth=0.5)  
+plt.xlabel("X [cm]")
+plt.ylabel("Z [cm]")
+plt.title("Curtain Plot of Log10(Damköhler Number)")
+plt.gca().invert_yaxis() 
+plt.tight_layout()
+plt.show()
+
+# Theta
+plt.figure(figsize=(8, 6))
+plt.tricontourf(triang, theta, cmap="Blues")  
+plt.colorbar(label="Water Content (Theta)") 
+plt.triplot(triang, color='black', alpha=0.5, linewidth=0.5) 
+plt.xlabel("X [cm]")
+plt.ylabel("Z [cm]")
+plt.title("Curtain Plot of Water Content (Theta)")
+plt.gca().invert_yaxis()  
+plt.tight_layout()
+plt.show()
+
+# V
+plt.figure(figsize=(8, 6))
+plt.tricontourf(triang, v, cmap="Reds") 
+plt.colorbar(label="Velocity Magnitude (v)") 
+plt.triplot(triang, color='black', alpha=0.5, linewidth=0.5)  
+plt.xlabel("X [cm]")
+plt.ylabel("Z [cm]")
+plt.title("Curtain Plot of Velocity Magnitude")
+plt.gca().invert_yaxis()  
+plt.tight_layout()
+plt.show()
